@@ -2893,6 +2893,14 @@ void CBasePlayer::Duck( )
 	}
 }
 
+void CBasePlayer::Lean()
+{
+	if (m_nButtons & (IN_LEANLEFT || IN_LEANRIGHT))
+	{
+		Msg("LEANING");
+	}
+}
+
 //
 // ID's player as such.
 //
@@ -3877,6 +3885,8 @@ void CBasePlayer::PreThink(void)
 	if ((m_nButtons & IN_DUCK) || (GetFlags() & FL_DUCKING) || (m_afPhysicsFlags & PFLAG_DUCKING) )
 		Duck();
 
+	if (m_nButtons & (IN_LEANLEFT || IN_LEANRIGHT))
+		Lean();
 	//
 	// If we're not on the ground, we're falling. Update our falling velocity.
 	//

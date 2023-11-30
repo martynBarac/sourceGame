@@ -157,7 +157,12 @@ BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	RecvPropFloat	(RECVINFO(m_flDuckJumpTime)),
 	RecvPropFloat	(RECVINFO(m_flJumpTime)),
 	RecvPropFloat	(RECVINFO(m_flFallVelocity)),
-
+	RecvPropInt		(RECVINFO(m_bLeaningLeft)),
+	RecvPropInt		(RECVINFO(m_bLeanedLeft)),
+	RecvPropFloat	(RECVINFO(m_flLeanLeftTime)),
+	RecvPropInt		(RECVINFO(m_bLeaningRight)),
+	RecvPropInt		(RECVINFO(m_bLeanedRight)),
+	RecvPropFloat	(RECVINFO(m_flLeanRightTime)),
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
 	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[0], m_vecPunchAngle[0])),
 	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[1], m_vecPunchAngle[1])),
@@ -337,6 +342,12 @@ BEGIN_PREDICTION_DATA_NO_BASE( CPlayerLocalData )
 	DEFINE_PRED_FIELD( m_bInDuckJump, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flDucktime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flDuckJumpTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD(m_flLeanLeftTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE),
+	DEFINE_PRED_FIELD(m_bLeaningLeft, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
+	DEFINE_PRED_FIELD(m_bLeanedLeft, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
+	DEFINE_PRED_FIELD(m_flLeanRightTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE),
+	DEFINE_PRED_FIELD(m_bLeaningRight, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
+	DEFINE_PRED_FIELD(m_bLeanedRight, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
 	DEFINE_PRED_FIELD( m_flJumpTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD_TOL( m_flFallVelocity, FIELD_FLOAT, FTYPEDESC_INSENDTABLE, 0.5f ),
 //	DEFINE_PRED_FIELD( m_nOldButtons, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
@@ -2686,6 +2697,11 @@ void C_BasePlayer::GetPredictionErrorSmoothingVector( Vector &vOffset )
 #endif
 }
 
+void C_BasePlayer::SetEyeAngleOffset(QAngle offset)
+{
+	m_EyeAngleOffset = offset;
+}
+QAngle C_BasePlayer::getEyeAngleOffset() { return m_EyeAngleOffset; }
 
 IRagdoll* C_BasePlayer::GetRepresentativeRagdoll() const
 {

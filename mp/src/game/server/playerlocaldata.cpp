@@ -32,6 +32,12 @@ BEGIN_SEND_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	SendPropInt		(SENDINFO(m_bInDuckJump),	1, SPROP_UNSIGNED ),
 	SendPropFloat	(SENDINFO(m_flDucktime), 12, SPROP_ROUNDDOWN|SPROP_CHANGES_OFTEN, 0.0f, 2048.0f ),
 	SendPropFloat	(SENDINFO(m_flDuckJumpTime), 12, SPROP_ROUNDDOWN, 0.0f, 2048.0f ),
+	SendPropFloat	(SENDINFO(m_flLeanLeftTime), 12, SPROP_ROUNDDOWN | SPROP_CHANGES_OFTEN, 0.0f, 2048.0f),
+	SendPropInt		(SENDINFO(m_bLeanedLeft), 1, SPROP_UNSIGNED),
+	SendPropInt		(SENDINFO(m_bLeaningLeft),	1, SPROP_UNSIGNED ),
+	SendPropFloat(SENDINFO(m_flLeanRightTime), 12, SPROP_ROUNDDOWN | SPROP_CHANGES_OFTEN, 0.0f, 2048.0f),
+	SendPropInt		(SENDINFO(m_bLeanedRight), 1, SPROP_UNSIGNED),
+	SendPropInt		(SENDINFO(m_bLeaningRight),	1, SPROP_UNSIGNED ),
 	SendPropFloat	(SENDINFO(m_flJumpTime), 12, SPROP_ROUNDDOWN, 0.0f, 2048.0f ),
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
 	SendPropFloat	(SENDINFO(m_flFallVelocity), 32, SPROP_NOSCALE ),

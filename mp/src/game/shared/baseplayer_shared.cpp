@@ -1763,11 +1763,13 @@ void CBasePlayer::CalcViewRoll( QAngle& eyeAngles )
 {
 	if ( GetMoveType() == MOVETYPE_NOCLIP )
 		return;
-
+	#ifndef CLIENT_DLL
 	float side = CalcRoll( GetAbsAngles(), GetAbsVelocity(), sv_rollangle.GetFloat(), sv_rollspeed.GetFloat() );
+	#else
+	float side = CalcRoll(GetAbsAngles(), GetAbsVelocity(), sv_rollangle.GetFloat(), sv_rollspeed.GetFloat()) + m_EyeAngleOffset[ROLL];
+	#endif
 	eyeAngles[ROLL] += side;
 }
-
 
 void CBasePlayer::DoMuzzleFlash()
 {

@@ -109,6 +109,10 @@ public:
 	#define TIME_TO_DUCK		0.4
 	#define TIME_TO_DUCK_MS		400.0f
 #endif 
+
+#define TIME_TO_LEAN		0.1
+#define TIME_TO_LEAN_MS		100.0f
+
 #define TIME_TO_UNDUCK		0.2
 #define TIME_TO_UNDUCK_MS	200.0f
 

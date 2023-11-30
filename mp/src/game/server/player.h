@@ -297,6 +297,7 @@ public:
 
 	virtual void			Jump( void );
 	virtual void			Duck( void );
+	virtual void			Lean(void);
 
 	const char				*GetTracerType( void );
 	void					MakeTracer( const Vector &vecTracerSrc, const trace_t &tr, int iTracerType );

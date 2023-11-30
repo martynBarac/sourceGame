@@ -54,6 +54,14 @@ public:
 	CNetworkVar( float, m_flDuckJumpTime );
 	// Jump time, time to auto unduck (since we auto crouch jump now).
 	CNetworkVar( float, m_flJumpTime );
+
+	CNetworkVar(bool, m_bLeanedLeft);
+	CNetworkVar(bool, m_bLeaningLeft);
+	CNetworkVar(float, m_flLeanLeftTime);
+	CNetworkVar(bool, m_bLeanedRight);
+	CNetworkVar(bool, m_bLeaningRight);
+	CNetworkVar(float, m_flLeanRightTime);
+
 	// Step sound side flip/flip
 	int m_nStepside;;
 	// Velocity at time when we hit ground

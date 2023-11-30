@@ -20,6 +20,7 @@
 #define CBTEXTURENAMEMAX	13			// only load first n chars of name
 
 #define GAMEMOVEMENT_DUCK_TIME				1000.0f		// ms
+#define GAMEMOVEMENT_LEAN_TIME				1000.0f		// ms
 #define GAMEMOVEMENT_JUMP_TIME				510.0f		// ms approx - based on the 21 unit height jump
 #define GAMEMOVEMENT_JUMP_HEIGHT			21.0f		// units
 #define GAMEMOVEMENT_TIME_TO_UNDUCK			( TIME_TO_UNDUCK * 1000.0f )		// ms
@@ -52,7 +53,7 @@ public:
 	virtual Vector	GetPlayerMins( bool ducked ) const;
 	virtual Vector	GetPlayerMaxs( bool ducked ) const;
 	virtual Vector	GetPlayerViewOffset( bool ducked ) const;
-
+	virtual void	setViewOffsetZ(Vector& offset);
 // For sanity checking getting stuck on CMoveData::SetAbsOrigin
 	virtual void	TracePlayerBBox( const Vector& start, const Vector& end, unsigned int fMask, int collisionGroup, trace_t& pm );
 	
@@ -212,6 +213,7 @@ protected:
 
 	// Ducking
 	virtual void	Duck( void );
+	virtual void	Lean( void );
 	virtual void	HandleDuckingSpeedCrop();
 	virtual void	FinishUnDuck( void );
 	virtual void	FinishDuck( void );
@@ -220,6 +222,7 @@ protected:
 	bool			CanUnDuckJump( trace_t &trace );
 	void			StartUnDuckJump( void );
 	void			FinishUnDuckJump( trace_t &trace );
+	void			SetLeanEyeOffset(float leanFraction);
 	void			SetDuckedEyeOffset( float duckFraction );
 	void			FixPlayerCrouchStuck( bool moveup );
 

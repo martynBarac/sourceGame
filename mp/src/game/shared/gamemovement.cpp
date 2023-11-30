@@ -1061,7 +1061,7 @@ void CGameMovement::CheckParameters( void )
 		if ( player->GetMoveType() != MOVETYPE_ISOMETRIC  &&
 			 player->GetMoveType() != MOVETYPE_NOCLIP )
 		{
-			mv->m_vecAngles[ROLL]  = CalcRoll( v_angle, mv->m_vecVelocity, sv_rollangle.GetFloat(), sv_rollspeed.GetFloat() );
+			mv->m_vecAngles[ROLL] = CalcRoll(v_angle, mv->m_vecVelocity, sv_rollangle.GetFloat(), sv_rollspeed.GetFloat());
 		}
 		else
 		{
@@ -1100,6 +1100,24 @@ void CGameMovement::ReduceTimers( void )
 			player->m_Local.m_flDucktime = 0;
 		}
 	}
+
+	if (player->m_Local.m_flLeanLeftTime > 0)
+	{
+		player->m_Local.m_flLeanLeftTime -= frame_msec;
+		if (player->m_Local.m_flLeanLeftTime < 0)
+		{
+			player->m_Local.m_flLeanLeftTime = 0;
+		}
+	}
+	if (player->m_Local.m_flLeanRightTime > 0)
+	{
+		player->m_Local.m_flLeanRightTime -= frame_msec;
+		if (player->m_Local.m_flLeanRightTime < 0)
+		{
+			player->m_Local.m_flLeanRightTime = 0;
+		}
+	}
+
 	if ( player->m_Local.m_flDuckJumpTime > 0 )
 	{
 		player->m_Local.m_flDuckJumpTime -= frame_msec;
@@ -4108,7 +4126,7 @@ void CGameMovement::FinishUnDuck( void )
 	player->RemoveFlag( FL_DUCKING );
 	player->m_Local.m_bDucking  = false;
 	player->m_Local.m_bInDuckJump  = false;
-	player->SetViewOffset( GetPlayerViewOffset( false ) );
+	setViewOffsetZ(GetPlayerViewOffset(false));
 	player->m_Local.m_flDucktime = 0;
 
 	mv->SetAbsOrigin( newOrigin );
@@ -4177,13 +4195,19 @@ void CGameMovement::FinishUnDuckJump( trace_t &trace )
 
 	Vector vecViewOffset = GetPlayerViewOffset( false );
 	vecViewOffset.z -= flDeltaZ;
-	player->SetViewOffset( vecViewOffset );
+	setViewOffsetZ(vecViewOffset);
 
 	VectorSubtract( vecNewOrigin, viewDelta, vecNewOrigin );
 	mv->SetAbsOrigin( vecNewOrigin );
 
 	// Recategorize position since ducking can change origin
 	CategorizePosition();
+}
+
+void CGameMovement::setViewOffsetZ(Vector &offset)
+{
+	Vector currentOffset = player->GetViewOffset();
+	player->SetViewOffset(Vector(currentOffset.x, currentOffset.y, offset.z));
 }
 
 //-----------------------------------------------------------------------------
@@ -4197,8 +4221,8 @@ void CGameMovement::FinishDuck( void )
 	player->AddFlag( FL_DUCKING );
 	player->m_Local.m_bDucked = true;
 	player->m_Local.m_bDucking = false;
-
-	player->SetViewOffset( GetPlayerViewOffset( true ) );
+	Vector currentOffset = player->GetViewOffset();
+	setViewOffsetZ(GetPlayerViewOffset(true));
 
 	// HACKHACK - Fudge for collision bug - no time to fix this properly
 	if ( player->GetGroundEntity() != NULL )
@@ -4247,7 +4271,7 @@ void CGameMovement::StartUnDuckJump( void )
 	player->m_Local.m_bDucked = true;
 	player->m_Local.m_bDucking = false;
 
-	player->SetViewOffset( GetPlayerViewOffset( true ) );
+	setViewOffsetZ(GetPlayerViewOffset(true));
 
 	Vector hullSizeNormal = VEC_HULL_MAX_SCALED( player ) - VEC_HULL_MIN_SCALED( player );
 	Vector hullSizeCrouch = VEC_DUCK_HULL_MAX_SCALED( player ) - VEC_DUCK_HULL_MIN_SCALED( player );
@@ -4281,6 +4305,34 @@ void CGameMovement::SetDuckedEyeOffset( float duckFraction )
 	temp.z = ( ( vecDuckViewOffset.z - fMore ) * duckFraction ) +
 				( vecStandViewOffset.z * ( 1 - duckFraction ) );
 	player->SetViewOffset( temp );
+}
+
+void CGameMovement::SetLeanEyeOffset(float duckFraction)
+{
+	//Vector vDuckHullMin = GetPlayerMins(true);
+	Vector vStandHullMin = GetPlayerMins(false);
+
+	//float fMore = (vDuckHullMin.z - vStandHullMin.z);
+
+	//Vector vecDuckViewOffset = GetPlayerViewOffset(true);
+	Vector vecStandViewOffset = GetPlayerViewOffset(false);
+	Vector temp = player->GetViewOffset();
+	QAngle angle = player->EyeAngles();
+	angle.y += 90;
+	Vector delta;
+	AngleVectors(angle, &delta);
+	Vector2D delta2D = Vector2D(delta.x, delta.y);
+	delta2D.NormalizeInPlace();
+	temp.x = (((vStandHullMin.x*0.45)* duckFraction) + (vecStandViewOffset.x * (1 - duckFraction)))*delta2D.x;
+	temp.y = (((vStandHullMin.x*0.45)* duckFraction) + (vecStandViewOffset.x * (1 - duckFraction)))*delta2D.y;
+	//temp.z = (((vStandHullMin.x*0.45)* duckFraction) + (vecStandViewOffset.x * (1 - duckFraction)))*delta.z;
+	player->SetViewOffset(temp);
+	
+	#ifdef CLIENT_DLL
+		QAngle angles = player->getEyeAngleOffset();
+		angles[ROLL] = 10 * duckFraction;
+		player->SetEyeAngleOffset(angles);
+	#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -4541,6 +4593,156 @@ void CGameMovement::Duck( void )
 	}
 }
 
+void CGameMovement::Lean(void)
+{
+	int buttonsChanged = (mv->m_nOldButtons ^ mv->m_nButtons);	// These buttons have changed this frame
+	int buttonsPressed = buttonsChanged & mv->m_nButtons;			// The changed ones still down are "pressed"
+	int buttonsReleased = buttonsChanged & mv->m_nOldButtons;		// The changed ones which were previously down are "released"
+	if (mv->m_nButtons & IN_LEANLEFT)
+	{
+		mv->m_nOldButtons |= IN_LEANLEFT;
+	}
+	else
+	{
+		mv->m_nOldButtons &= ~IN_LEANLEFT;
+	}
+
+	if (mv->m_nButtons & IN_LEANRIGHT)
+	{
+		mv->m_nOldButtons |= IN_LEANRIGHT;
+	}
+	else
+	{
+		mv->m_nOldButtons &= ~IN_LEANRIGHT;
+	}
+
+	// Handle death.
+	if (IsDead())
+		return;
+
+	//None or both buttons pressed, unlean. Leaning left and pressing right = unlean
+	if (
+		((mv->m_nButtons & IN_LEANLEFT) && (mv->m_nButtons & IN_LEANRIGHT)) ||
+		!((mv->m_nButtons & IN_LEANLEFT) || (mv->m_nButtons & IN_LEANRIGHT)) ||
+		(player->m_Local.m_bLeaningLeft && (mv->m_nButtons & IN_LEANRIGHT)) ||
+		(player->m_Local.m_bLeaningRight && (mv->m_nButtons & IN_LEANLEFT))
+		)
+	{
+		if (player->m_Local.m_bLeaningLeft)
+		{
+			// Invert time if release before fully ducked!!!
+			if (buttonsPressed & IN_LEANRIGHT || buttonsReleased & IN_LEANLEFT)
+			{
+				if (player->m_Local.m_bLeanedLeft)
+				{
+					player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME;
+				}
+				player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME;
+				float unduckMilliseconds = 1000.0f * TIME_TO_LEAN;
+				float duckMilliseconds = 1000.0f * TIME_TO_LEAN;
+				float elapsedMilliseconds = GAMEMOVEMENT_LEAN_TIME - player->m_Local.m_flLeanLeftTime;
+
+				float fracDucked = elapsedMilliseconds / duckMilliseconds;
+				float remainingUnduckMilliseconds = fracDucked * unduckMilliseconds;
+				player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME - unduckMilliseconds + remainingUnduckMilliseconds;
+			}
+			
+			float flDuckMilliseconds = MAX(0.0f, GAMEMOVEMENT_LEAN_TIME - (float)player->m_Local.m_flLeanLeftTime);
+			float flDuckSeconds = flDuckMilliseconds * 0.001f;
+			// Finish ducking immediately if duck time is over or not on ground
+			if (flDuckSeconds > TIME_TO_LEAN)
+			{
+				player->m_Local.m_bLeaningLeft = false;
+				SetLeanEyeOffset(0);
+			}
+			else
+			{
+				// Calc parametric time
+				float flDuckFraction = SimpleSpline(1.0f - (flDuckSeconds / TIME_TO_LEAN));
+				SetLeanEyeOffset(-flDuckFraction);
+			}
+			
+		}
+		if (player->m_Local.m_bLeanedLeft)
+		{
+			player->m_Local.m_bLeanedLeft = false;
+		}
+		if (player->m_Local.m_bLeaningRight)
+		{
+			player->m_Local.m_bLeaningRight = false;
+		}
+		if (player->m_Local.m_bLeanedRight)
+		{
+			player->m_Local.m_bLeanedRight = false;
+		}
+		return;
+	}
+	//Only one button pressed, lean
+	else
+	{
+		// Leanleft button pressed only
+		if (mv->m_nButtons & IN_LEANLEFT)
+		{
+			// Not leaned at all
+			if (!player->m_Local.m_bLeaningLeft && !player->m_Local.m_bLeanedLeft)
+			{
+				//Start leaning
+				player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME;
+				player->m_Local.m_bLeaningLeft = true;
+			}
+			if (player->m_Local.m_bLeaningLeft)
+			{
+				float flDuckMilliseconds = MAX(0.0f, GAMEMOVEMENT_LEAN_TIME - (float)player->m_Local.m_flLeanLeftTime);
+				float flDuckSeconds = flDuckMilliseconds * 0.001f;
+
+				// Finish in duck transition when transition time is over, in "duck", in air.
+				if ((flDuckSeconds > TIME_TO_LEAN))
+				{
+					player->m_Local.m_bLeanedLeft = true;
+					SetLeanEyeOffset(-1.0f);
+				}
+				else
+				{
+					// Calc parametric time
+					float flDuckFraction = SimpleSpline(flDuckSeconds / TIME_TO_LEAN);
+					SetLeanEyeOffset(-flDuckFraction);
+
+				}
+			}
+		}
+
+		if (mv->m_nButtons & IN_LEANRIGHT)
+		{
+			// Not leaned at all
+			if (!player->m_Local.m_bLeaningRight && !player->m_Local.m_bLeanedRight)
+			{
+				//Start leaning
+				player->m_Local.m_flLeanRightTime = GAMEMOVEMENT_LEAN_TIME;
+				player->m_Local.m_bLeaningRight = true;
+			}
+			if (player->m_Local.m_bLeaningRight)
+			{
+				float flDuckMilliseconds = MAX(0.0f, GAMEMOVEMENT_LEAN_TIME - (float)player->m_Local.m_flLeanRightTime);
+				float flDuckSeconds = flDuckMilliseconds * 0.001f;
+
+				// Finish in duck transition when transition time is over, in "duck", in air.
+				if ((flDuckSeconds > TIME_TO_LEAN))
+				{
+					player->m_Local.m_bLeanedRight = true;
+					SetLeanEyeOffset(1.0f);
+				}
+				else
+				{
+					// Calc parametric time
+					float flDuckFraction = SimpleSpline(flDuckSeconds / TIME_TO_LEAN);
+					SetLeanEyeOffset(flDuckFraction);
+
+				}
+			}
+		}
+	}
+}
+
 static ConVar sv_optimizedmovement( "sv_optimizedmovement", "1", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY );
 
 //-----------------------------------------------------------------------------
@@ -4551,7 +4753,7 @@ void CGameMovement::PlayerMove( void )
 	VPROF( "CGameMovement::PlayerMove" );
 
 	CheckParameters();
-	
+	Lean();
 	// clear output applied velocity
 	mv->m_outWishVel.Init();
 	mv->m_outJumpVel.Init();
@@ -4609,7 +4811,7 @@ void CGameMovement::PlayerMove( void )
 
 	UpdateDuckJumpEyeOffset();
 	Duck();
-
+	
 	// Don't run ladder code if dead on on a train
 	if ( !player->pl.deadflag && !(player->GetFlags() & FL_ONTRAIN) )
 	{
