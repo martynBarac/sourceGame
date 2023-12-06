@@ -145,6 +145,7 @@ static  kbutton_t   in_grenade2;
 static	kbutton_t	in_attack3;
 static	kbutton_t	in_leanleft;
 static	kbutton_t	in_leanright;
+static  kbutton_t	in_prone;
 kbutton_t	in_ducktoggle;
 
 /*
@@ -496,6 +497,8 @@ void IN_LeanLeftDown(const CCommand &args) { KeyDown(&in_leanleft, args[1]); }
 void IN_LeanLeftUp(const CCommand &args) { KeyUp(&in_leanleft, args[1]); }
 void IN_LeanRightDown(const CCommand &args) { KeyDown(&in_leanright, args[1]); }
 void IN_LeanRightUp(const CCommand &args) { KeyUp(&in_leanright, args[1]); }
+void IN_ProneDown(const CCommand &args) { KeyDown(&in_prone, args[1]); }
+void IN_ProneUp(const CCommand &args) { KeyUp(&in_prone, args[1]); }
 
 void IN_DuckToggle( const CCommand &args ) 
 { 
@@ -1475,8 +1478,9 @@ int CInput::GetButtonBits( int bResetState )
 	CalcButtonBits( bits, IN_GRENADE1, s_ClearInputState, &in_grenade1, bResetState );
 	CalcButtonBits( bits, IN_GRENADE2, s_ClearInputState, &in_grenade2, bResetState );
 	CalcButtonBits( bits, IN_ATTACK3, s_ClearInputState, &in_attack3, bResetState );
-	CalcButtonBits(bits, IN_LEANLEFT, s_ClearInputState, &in_leanleft, bResetState);
-	CalcButtonBits(bits, IN_LEANRIGHT, s_ClearInputState, &in_leanright, bResetState);
+	CalcButtonBits( bits, IN_LEANLEFT, s_ClearInputState, &in_leanleft, bResetState);
+	CalcButtonBits( bits, IN_LEANRIGHT, s_ClearInputState, &in_leanright, bResetState);
+	CalcButtonBits( bits, IN_PRONE, s_ClearInputState, &in_prone, bResetState);
 	if ( KeyState(&in_ducktoggle) )
 	{
 		bits |= IN_DUCK;
@@ -1637,6 +1641,8 @@ static ConCommand startleanleft("+leanleft", IN_LeanLeftDown);
 static ConCommand endleanleft ("-leanleft", IN_LeanLeftUp);
 static ConCommand startleanright("+leanright", IN_LeanRightDown);
 static ConCommand endleanright("-leanright", IN_LeanRightUp);
+static ConCommand startprone("+prone", IN_ProneDown);
+static ConCommand endprone("-prone", IN_ProneUp);
 
 #ifdef TF_CLIENT_DLL
 static ConCommand toggle_duck( "toggle_duck", IN_DuckToggle );

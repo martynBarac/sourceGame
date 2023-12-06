@@ -699,11 +699,14 @@ void CHL2MP_Player::SetAnimation( PLAYER_ANIM playerAnim )
 	}
 
 	Activity idealActivity = ACT_HL2MP_RUN;
-
+	
 	// This could stand to be redone. Why is playerAnim abstracted from activity? (sjb)
-	if ( playerAnim == PLAYER_JUMP )
+	if (playerAnim == PLAYER_JUMP && !(m_Local.m_bProned || (GetFlags() & FL_PRONING)))
 	{
+		
+
 		idealActivity = ACT_HL2MP_JUMP;
+
 	}
 	else if ( playerAnim == PLAYER_DIE )
 	{
@@ -731,9 +734,10 @@ void CHL2MP_Player::SetAnimation( PLAYER_ANIM playerAnim )
 	{
 		idealActivity = ACT_HL2MP_GESTURE_RELOAD;
 	}
+	
 	else if ( playerAnim == PLAYER_IDLE || playerAnim == PLAYER_WALK )
 	{
-		if ( !( GetFlags() & FL_ONGROUND ) && GetActivity( ) == ACT_HL2MP_JUMP )	// Still jumping
+		if (!(GetFlags() & FL_ONGROUND) && (GetActivity() == ACT_HL2MP_JUMP) && !(m_Local.m_bProned || (GetFlags() & FL_PRONING)))	// Still jumping
 		{
 			idealActivity = GetActivity( );
 		}
@@ -746,9 +750,21 @@ void CHL2MP_Player::SetAnimation( PLAYER_ANIM playerAnim )
 				idealActivity = ACT_SWIM;
 		}
 		*/
+		
 		else
 		{
-			if ( GetFlags() & FL_DUCKING )
+			if (m_Local.m_bProning || (GetFlags() & FL_PRONING))
+			{
+				if (speed > 0)
+				{
+					idealActivity = ACT_HL2MP_IDLE_PRONE;
+				}
+				else
+				{
+					idealActivity = ACT_HL2MP_IDLE_PRONE;
+				}
+			}
+			else if ( GetFlags() & FL_DUCKING )
 			{
 				if ( speed > 0 )
 				{
@@ -783,7 +799,20 @@ void CHL2MP_Player::SetAnimation( PLAYER_ANIM playerAnim )
 
 		idealActivity = TranslateTeamActivity( idealActivity );
 	}
-	
+
+
+	if (m_Local.m_bLeaningLeft || m_Local.m_bLeanedLeft)
+	{
+
+		RestartGesture((playerAnim == PLAYER_IDLE) ? ACT_HL2MP_LEAN_LEFT_IDLE : ACT_HL2MP_LEAN_LEFT);
+	}
+	else if (m_Local.m_bLeaningRight || m_Local.m_bLeanedRight)
+	{
+
+		RestartGesture((playerAnim == PLAYER_IDLE) ? ACT_HL2MP_LEAN_RIGHT_IDLE : ACT_HL2MP_LEAN_RIGHT);
+	}
+
+
 	if ( idealActivity == ACT_HL2MP_GESTURE_RANGE_ATTACK )
 	{
 		RestartGesture( Weapon_TranslateActivity( idealActivity ) );

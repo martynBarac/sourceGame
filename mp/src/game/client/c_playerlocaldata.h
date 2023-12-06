@@ -59,6 +59,8 @@ public:
 	bool					m_bLeanedRight;
 	bool					m_bLeaningRight;
 	float					m_flLeanRightTime;
+	bool					m_bProned;
+	bool					m_bProning;
 
 	// Base velocity that was passed in to server physics so 
 	//  client can predict conveyors correctly.  Server zeroes it, so we need to store here, too.

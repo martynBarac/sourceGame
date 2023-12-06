@@ -39,4 +39,5 @@
 #define	IN_ATTACK3		(1 << 25)
 #define IN_LEANLEFT		(1 << 26)
 #define IN_LEANRIGHT	(1 << 27)
+#define IN_PRONE		(1 << 28)
 #endif // IN_BUTTONS_H

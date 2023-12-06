@@ -713,6 +713,11 @@ Vector CGameMovement::GetPlayerMins( bool ducked ) const
 	return ducked ? VEC_DUCK_HULL_MIN_SCALED( player ) : VEC_HULL_MIN_SCALED( player );
 }
 
+Vector CGameMovement::GetPlayerMins(bool ducked, bool proned) const
+{
+	return proned ? VEC_PRONE_HULL_MIN_SCALED(player) : (ducked ? VEC_DUCK_HULL_MIN_SCALED(player) : VEC_HULL_MIN_SCALED(player));
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : ducked - 
@@ -736,7 +741,7 @@ Vector CGameMovement::GetPlayerMins( void ) const
 	}
 	else
 	{
-		return player->m_Local.m_bDucked  ? VEC_DUCK_HULL_MIN_SCALED( player ) : VEC_HULL_MIN_SCALED( player );
+		return player->m_Local.m_bProned ? VEC_PRONE_HULL_MIN_SCALED(player) : (player->m_Local.m_bDucked ? VEC_DUCK_HULL_MIN_SCALED(player) : VEC_HULL_MIN_SCALED(player));
 	}
 }
 
@@ -753,7 +758,7 @@ Vector CGameMovement::GetPlayerMaxs( void ) const
 	}
 	else
 	{
-		return player->m_Local.m_bDucked  ? VEC_DUCK_HULL_MAX_SCALED( player ) : VEC_HULL_MAX_SCALED( player );
+		return player->m_Local.m_bProned ? VEC_PRONE_HULL_MAX_SCALED(player) : (player->m_Local.m_bDucked ? VEC_DUCK_HULL_MAX_SCALED(player) : VEC_HULL_MAX_SCALED(player));
 	}
 }
 
@@ -765,6 +770,11 @@ Vector CGameMovement::GetPlayerMaxs( void ) const
 Vector CGameMovement::GetPlayerViewOffset( bool ducked ) const
 {
 	return ducked ? VEC_DUCK_VIEW_SCALED( player ) : VEC_VIEW_SCALED( player );
+}
+
+Vector CGameMovement::GetPlayerViewOffset( bool ducked, bool proned ) const
+{
+	return proned ? VEC_PRONE_VIEW_SCALED(player) : (ducked ? VEC_DUCK_VIEW_SCALED(player) : VEC_VIEW_SCALED(player));
 }
 
 #if 0
@@ -2371,6 +2381,7 @@ void CGameMovement::PlaySwimSound()
 //-----------------------------------------------------------------------------
 bool CGameMovement::CheckJumpButton( void )
 {
+	
 	if (player->pl.deadflag)
 	{
 		mv->m_nOldButtons |= IN_JUMP ;	// don't jump again until released
@@ -2410,10 +2421,10 @@ bool CGameMovement::CheckJumpButton( void )
 	}
 
 	// No more effect
- 	if (player->GetGroundEntity() == NULL)
+	if (player->GetGroundEntity() == NULL || (player->GetFlags() & FL_PRONING))
 	{
 		mv->m_nOldButtons |= IN_JUMP;
-		return false;		// in air, so no effect
+		return false;		// in air / proning, so no effect
 	}
 
 	// Don't allow jumping when the player is in a stasis field.
@@ -2438,9 +2449,10 @@ bool CGameMovement::CheckJumpButton( void )
     SetGroundEntity( NULL );
 	
 	player->PlayStepSound( (Vector &)mv->GetAbsOrigin(), player->m_pSurfaceData, 1.0, true );
-	
-	MoveHelper()->PlayerSetAnimation( PLAYER_JUMP );
-
+	if (!(player->m_Local.m_bProning || player->m_Local.m_bProned))
+	{
+		MoveHelper()->PlayerSetAnimation(PLAYER_JUMP);
+	}
 	float flGroundFactor = 1.0f;
 	if (player->m_pSurfaceData)
 	{
@@ -4082,13 +4094,69 @@ bool CGameMovement::CanUnduck()
 		viewDelta.Negate();
 		VectorAdd( newOrigin, viewDelta, newOrigin );
 	}
-
-	bool saveducked = player->m_Local.m_bDucked;
-	player->m_Local.m_bDucked = false;
-	TracePlayerBBox( mv->GetAbsOrigin(), newOrigin, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace );
-	player->m_Local.m_bDucked = saveducked;
+	if (player->GetFlags() & FL_PRONING)
+	{
+		bool saveducked = player->m_Local.m_bProned;
+		player->m_Local.m_bProned = false;
+		TracePlayerBBox(mv->GetAbsOrigin(), newOrigin, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace);
+		player->m_Local.m_bProned = saveducked;
+	}
+	else
+	{
+		bool saveducked = player->m_Local.m_bDucked;
+		player->m_Local.m_bDucked = false;
+		TracePlayerBBox(mv->GetAbsOrigin(), newOrigin, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace);
+		player->m_Local.m_bDucked = saveducked;
+	}
+	
 	if ( trace.startsolid || ( trace.fraction != 1.0f ) )
 		return false;	
+
+	return true;
+}
+
+bool CGameMovement::CanUnprone()
+{
+	int i;
+	trace_t trace;
+	Vector newOrigin;
+
+	VectorCopy(mv->GetAbsOrigin(), newOrigin);
+
+	if (player->GetGroundEntity() != NULL)
+	{
+		for (i = 0; i < 3; i++)
+		{
+			newOrigin[i] += (VEC_PRONE_HULL_MIN_SCALED(player)[i] - VEC_DUCK_HULL_MIN_SCALED(player)[i]);
+		}
+	}
+	else
+	{
+		// If in air an letting go of crouch, make sure we can offset origin to make
+		//  up for uncrouching
+		Vector hullSizeNormal = VEC_DUCK_HULL_MAX_SCALED(player) - VEC_DUCK_HULL_MIN_SCALED(player);
+		Vector hullSizeCrouch = VEC_PRONE_HULL_MAX_SCALED(player) - VEC_PRONE_HULL_MIN_SCALED(player);
+		Vector viewDelta = (hullSizeNormal - hullSizeCrouch);
+		viewDelta.Negate();
+		VectorAdd(newOrigin, viewDelta, newOrigin);
+	}
+	if (player->GetFlags() & FL_PRONING)
+	{
+		bool saveducked = player->m_Local.m_bProned;
+		player->m_Local.m_bProned = false;
+		TracePlayerBBox(mv->GetAbsOrigin(), newOrigin, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace);
+		player->m_Local.m_bProned = saveducked;
+	}
+	else
+	{
+		bool saveducked = player->m_Local.m_bDucked;
+		player->m_Local.m_bDucked = false;
+		TracePlayerBBox(mv->GetAbsOrigin(), newOrigin, PlayerSolidMask(), COLLISION_GROUP_PLAYER_MOVEMENT, trace);
+		player->m_Local.m_bDucked = saveducked;
+	}
+
+	if (trace.startsolid || (trace.fraction != 1.0f))
+		return false;
 
 	return true;
 }
@@ -4108,7 +4176,7 @@ void CGameMovement::FinishUnDuck( void )
 	{
 		for ( i = 0; i < 3; i++ )
 		{
-			newOrigin[i] += ( VEC_DUCK_HULL_MIN_SCALED( player )[i] - VEC_HULL_MIN_SCALED( player )[i] );
+			newOrigin[i] += ((player->m_Local.m_bProning ? VEC_PRONE_HULL_MIN_SCALED(player)[i] : VEC_DUCK_HULL_MIN_SCALED(player)[i]) - VEC_HULL_MIN_SCALED(player)[i]);
 		}
 	}
 	else
@@ -4116,17 +4184,37 @@ void CGameMovement::FinishUnDuck( void )
 		// If in air an letting go of crouch, make sure we can offset origin to make
 		//  up for uncrouching
 		Vector hullSizeNormal = VEC_HULL_MAX_SCALED( player ) - VEC_HULL_MIN_SCALED( player );
-		Vector hullSizeCrouch = VEC_DUCK_HULL_MAX_SCALED( player ) - VEC_DUCK_HULL_MIN_SCALED( player );
+		Vector hullSizeCrouch = (player->m_Local.m_bProning ? VEC_PRONE_HULL_MAX_SCALED(player) : VEC_DUCK_HULL_MAX_SCALED(player))
+			- (player->m_Local.m_bProning ? VEC_PRONE_HULL_MIN_SCALED(player) : VEC_DUCK_HULL_MIN_SCALED(player));
 		Vector viewDelta = ( hullSizeNormal - hullSizeCrouch );
 		viewDelta.Negate();
 		VectorAdd( newOrigin, viewDelta, newOrigin );
 	}
 
-	player->m_Local.m_bDucked = false;
-	player->RemoveFlag( FL_DUCKING );
-	player->m_Local.m_bDucking  = false;
-	player->m_Local.m_bInDuckJump  = false;
-	setViewOffsetZ(GetPlayerViewOffset(false));
+	
+	
+	if (player->m_Local.m_bProning || player->m_Local.m_bProned)
+	{
+		player->RemoveFlag(FL_PRONING);
+		player->m_Local.m_bProned = false;
+		player->m_Local.m_bProning = false;
+		setViewOffsetZ(GetPlayerViewOffset(false));
+		if (!(player->m_Local.m_bDucked || player->m_Local.m_bDucking))
+		{
+			player->RemoveFlag(FL_DUCKING);
+		}
+	}
+	else
+	{
+		player->RemoveFlag(FL_DUCKING);
+		player->m_Local.m_bDucked = false;
+		player->m_Local.m_bDucking = false;
+		player->m_Local.m_bInDuckJump = false;
+		player->m_Local.m_bProned = false;
+		player->m_Local.m_bProning = false;
+		setViewOffsetZ(GetPlayerViewOffset(false));
+	}
+	
 	player->m_Local.m_flDucktime = 0;
 
 	mv->SetAbsOrigin( newOrigin );
@@ -4186,8 +4274,11 @@ void CGameMovement::FinishUnDuckJump( trace_t &trace )
 	flDeltaZ -= viewDelta.z;
 
 	player->RemoveFlag( FL_DUCKING );
+	player->RemoveFlag( FL_PRONING );
 	player->m_Local.m_bDucked = false;
 	player->m_Local.m_bDucking  = false;
+	player->m_Local.m_bProned = false;
+	player->m_Local.m_bProning = false;
 	player->m_Local.m_bInDuckJump = false;
 	player->m_Local.m_flDucktime = 0.0f;
 	player->m_Local.m_flDuckJumpTime = 0.0f;
@@ -4215,14 +4306,25 @@ void CGameMovement::setViewOffsetZ(Vector &offset)
 //-----------------------------------------------------------------------------
 void CGameMovement::FinishDuck( void )
 {
-	if ( player->GetFlags() & FL_DUCKING )
-		return;
 
-	player->AddFlag( FL_DUCKING );
-	player->m_Local.m_bDucked = true;
-	player->m_Local.m_bDucking = false;
+	
+	if (player->m_Local.m_bProning)
+	{
+		player->AddFlag(FL_PRONING);
+		player->RemoveFlag(FL_DUCKING);
+		player->m_Local.m_bProned = true;
+		player->m_Local.m_bProning = false;
+		player->m_Local.m_bDucked = false;
+	}
+	else
+	{
+		player->RemoveFlag(FL_PRONING);
+		player->AddFlag(FL_DUCKING);
+		player->m_Local.m_bDucked = true;
+		player->m_Local.m_bDucking = false;
+	}
 	Vector currentOffset = player->GetViewOffset();
-	setViewOffsetZ(GetPlayerViewOffset(true));
+	setViewOffsetZ(GetPlayerViewOffset(true, player->m_Local.m_bProned));
 
 	// HACKHACK - Fudge for collision bug - no time to fix this properly
 	if ( player->GetGroundEntity() != NULL )
@@ -4230,14 +4332,15 @@ void CGameMovement::FinishDuck( void )
 		for ( int i = 0; i < 3; i++ )
 		{
 			Vector org = mv->GetAbsOrigin();
-			org[ i ]-= ( VEC_DUCK_HULL_MIN_SCALED( player )[i] - VEC_HULL_MIN_SCALED( player )[i] );
+			org[i] -= ((player->m_Local.m_bProned ? VEC_PRONE_HULL_MIN_SCALED(player)[i] : VEC_DUCK_HULL_MIN_SCALED(player)[i]) - VEC_HULL_MIN_SCALED(player)[i]);
 			mv->SetAbsOrigin( org );
 		}
 	}
 	else
 	{
 		Vector hullSizeNormal = VEC_HULL_MAX_SCALED( player ) - VEC_HULL_MIN_SCALED( player );
-		Vector hullSizeCrouch = VEC_DUCK_HULL_MAX_SCALED( player ) - VEC_DUCK_HULL_MIN_SCALED( player );
+		Vector hullSizeCrouch = (player->m_Local.m_bProned ? VEC_PRONE_HULL_MAX_SCALED(player) : VEC_DUCK_HULL_MAX_SCALED(player)) 
+			- (player->m_Local.m_bProned ? VEC_PRONE_HULL_MIN_SCALED(player) : VEC_DUCK_HULL_MIN_SCALED(player));
 		Vector viewDelta = ( hullSizeNormal - hullSizeCrouch );
 		Vector out;
    		VectorAdd( mv->GetAbsOrigin(), viewDelta, out );
@@ -4292,14 +4395,15 @@ void CGameMovement::StartUnDuckJump( void )
 // Purpose: 
 // Input  : duckFraction - 
 //-----------------------------------------------------------------------------
-void CGameMovement::SetDuckedEyeOffset( float duckFraction )
+void CGameMovement::
+SetDuckedEyeOffset( float duckFraction, bool prone)
 {
- 	Vector vDuckHullMin = GetPlayerMins( true );
+ 	Vector vDuckHullMin = GetPlayerMins( true, prone );
 	Vector vStandHullMin = GetPlayerMins( false );
 
 	float fMore = ( vDuckHullMin.z - vStandHullMin.z );
 
-	Vector vecDuckViewOffset = GetPlayerViewOffset( true );
+	Vector vecDuckViewOffset = GetPlayerViewOffset( true, prone );
 	Vector vecStandViewOffset = GetPlayerViewOffset( false );
 	Vector temp = player->GetViewOffset();
 	temp.z = ( ( vecDuckViewOffset.z - fMore ) * duckFraction ) +
@@ -4343,7 +4447,7 @@ void CGameMovement::SetLeanEyeOffset(float duckFraction)
 //-----------------------------------------------------------------------------
 void CGameMovement::HandleDuckingSpeedCrop( void )
 {
-	if ( !( m_iSpeedCropped & SPEED_CROPPED_DUCK ) && ( player->GetFlags() & FL_DUCKING ) && ( player->GetGroundEntity() != NULL ) )
+	if ( !( m_iSpeedCropped & SPEED_CROPPED_DUCK ) && ( player->GetFlags() & (FL_DUCKING | FL_PRONING) ) && ( player->GetGroundEntity() != NULL ) )
 	{
 		float frac = 0.33333333f;
 		mv->m_flForwardMove	*= frac;
@@ -4392,6 +4496,7 @@ void CGameMovement::Duck( void )
 	// Check to see if we are in the air.
 	bool bInAir = ( player->GetGroundEntity() == NULL );
 	bool bInDuck = ( player->GetFlags() & FL_DUCKING ) ? true : false;
+	bool bInProne = (player->GetFlags() & FL_PRONING) ? true : false;
 	bool bDuckJump = ( player->m_Local.m_flJumpTime > 0.0f );
 	bool bDuckJumpTime = ( player->m_Local.m_flDuckJumpTime > 0.0f );
 
@@ -4403,6 +4508,14 @@ void CGameMovement::Duck( void )
 	{
 		mv->m_nOldButtons &= ~IN_DUCK;
 	}
+	if (mv->m_nButtons & IN_PRONE)
+	{
+		mv->m_nOldButtons |= IN_PRONE;
+	}
+	else
+	{
+		mv->m_nOldButtons &= ~IN_PRONE;
+	}
 
 	// Handle death.
 	if ( IsDead() )
@@ -4410,16 +4523,17 @@ void CGameMovement::Duck( void )
 
 	// Slow down ducked players.
 	HandleDuckingSpeedCrop();
+	
 
-	// If the player is holding down the duck button, the player is in duck transition, ducking, or duck-jumping.
-	if ( ( mv->m_nButtons & IN_DUCK ) || player->m_Local.m_bDucking  || bInDuck || bDuckJump )
+	// If the player is holding down the duck button, the prone button, the player is in duck transition, ducking, or duck-jumping.
+	if ((mv->m_nButtons & (IN_DUCK | IN_PRONE)) || player->m_Local.m_bDucking || player->m_Local.m_bProning || bInDuck || bInProne || bDuckJump)
 	{
 		// DUCK
-		if ( ( mv->m_nButtons & IN_DUCK ) || bDuckJump )
+		if ((mv->m_nButtons & (IN_DUCK | IN_PRONE)) || bDuckJump)
 		{
 // XBOX SERVER ONLY
 #if !defined(CLIENT_DLL)
-			if ( IsX360() && buttonsPressed & IN_DUCK )
+			if (IsX360() && buttonsPressed & (IN_DUCK | IN_PRONE))
 			{
 				// Hinting logic
 				if ( player->GetToggledDuckState() && player->m_nNumCrouches < NUM_CROUCH_HINTS )
@@ -4430,28 +4544,57 @@ void CGameMovement::Duck( void )
 			}
 #endif
 			// Have the duck button pressed, but the player currently isn't in the duck position.
-			if ( ( buttonsPressed & IN_DUCK ) && !bInDuck && !bDuckJump && !bDuckJumpTime )
+			if ((buttonsPressed & (IN_DUCK | IN_PRONE)) && !bInDuck && !bInProne && !bDuckJump && !bDuckJumpTime)
 			{
-				player->m_Local.m_flDucktime = GAMEMOVEMENT_DUCK_TIME;
-				player->m_Local.m_bDucking = true;
+				Msg("\nPressed Crouch\n");
+				if ((!(mv->m_nButtons & (IN_PRONE)) || !(mv->m_nButtons & (IN_DUCK))) || 
+					(buttonsPressed & (IN_DUCK) && buttonsPressed & (IN_PRONE)))
+					player->m_Local.m_flDucktime = GAMEMOVEMENT_DUCK_TIME;
+				// Can either start ducking or start proning
+				if ((buttonsPressed & IN_PRONE) && (player->m_Local.m_bDucking == false) ) player->m_Local.m_bProning = true;
+				else if (!((player->m_Local.m_bInDuckJump))) player->m_Local.m_bDucking = true;
 			}
-			
+			else if ((mv->m_nButtons & IN_PRONE) && player->m_Local.m_bDucked && !(player->m_Local.m_bInDuckJump) && !(bInAir))
+			{
+				Msg("\nPRONE AFTER CROUCH\n");
+				player->m_Local.m_flDucktime = GAMEMOVEMENT_DUCK_TO_PRONE_TIME;
+				Msg("Yea %f \n", player->m_Local.m_flDucktime);
+				player->m_Local.m_bProning = true;
+				//player->m_Local.m_bDucked = false;
+				FinishDuck();
+				//player->RemoveFlag(FL_DUCKING);
+				return;
+			}
+			else if ((buttonsReleased & IN_PRONE) && player->m_Local.m_bProned && (mv->m_nButtons & (IN_DUCK)) && !(player->m_Local.m_bInDuckJump))
+			{
+				if (CanUnprone())
+				{
+					player->m_Local.m_bProning = false;
+					player->RemoveFlag(FL_PRONING);
+					player->AddFlag(FL_DUCKING);
+					player->m_Local.m_bDucking = true;
+					player->m_Local.m_bProned = false;
+					player->m_Local.m_bDucked = true;
+				}
+			}
 			// The player is in duck transition and not duck-jumping.
-			if ( player->m_Local.m_bDucking && !bDuckJump && !bDuckJumpTime )
+			// TODO: Smooth out duck transition when pressing duck on way up
+			if ((player->m_Local.m_bDucking || player->m_Local.m_bProning) && !bDuckJump && !bDuckJumpTime)
 			{
 				float flDuckMilliseconds = MAX( 0.0f, GAMEMOVEMENT_DUCK_TIME - ( float )player->m_Local.m_flDucktime );
 				float flDuckSeconds = flDuckMilliseconds * 0.001f;
-				
+				Msg("%f \n", player->m_Local.m_flDucktime);
 				// Finish in duck transition when transition time is over, in "duck", in air.
-				if ( ( flDuckSeconds > TIME_TO_DUCK ) || bInDuck || bInAir )
+				if ((flDuckSeconds > TIME_TO_DUCK) || (bInDuck && !player->m_Local.m_bProning) || bInProne || bInAir)
 				{
+					Msg("\nFinish Crouch\n");
 					FinishDuck();
 				}
 				else
 				{
 					// Calc parametric time
 					float flDuckFraction = SimpleSpline( flDuckSeconds / TIME_TO_DUCK );
-					SetDuckedEyeOffset( flDuckFraction );
+					SetDuckedEyeOffset(flDuckFraction, player->m_Local.m_bProning);
 				}
 			}
 
@@ -4465,7 +4608,7 @@ void CGameMovement::Duck( void )
 				else
 				{
 					// Check for a crouch override.
-					if ( !( mv->m_nButtons & IN_DUCK ) )
+					if (!(mv->m_nButtons & (IN_DUCK | IN_PRONE)))
 					{
 						trace_t trace;
 						if ( CanUnDuckJump( trace ) )
@@ -4476,14 +4619,17 @@ void CGameMovement::Duck( void )
 					}
 				}
 			}
+			
 		}
+		
+
 		// UNDUCK (or attempt to...)
 		else
 		{
 			if ( player->m_Local.m_bInDuckJump )
 			{
 				// Check for a crouch override.
-   				if ( !( mv->m_nButtons & IN_DUCK ) )
+				if (!(mv->m_nButtons & (IN_DUCK | IN_PRONE)))
 				{
 					trace_t trace;
 					if ( CanUnDuckJump( trace ) )
@@ -4501,22 +4647,23 @@ void CGameMovement::Duck( void )
 					player->m_Local.m_bInDuckJump = false;
 				}
 			}
-
 			if ( bDuckJumpTime )
 				return;
-
+	
 			// Try to unduck unless automovement is not allowed
 			// NOTE: When not onground, you can always unduck
-			if ( player->m_Local.m_bAllowAutoMovement || bInAir || player->m_Local.m_bDucking )
+			if (player->m_Local.m_bAllowAutoMovement || bInAir || player->m_Local.m_bDucking || player->m_Local.m_bProning)
 			{
+
 				// We released the duck button, we aren't in "duck" and we are not in the air - start unduck transition.
-				if ( ( buttonsReleased & IN_DUCK ) )
+				if ((buttonsReleased & (IN_DUCK | IN_PRONE)))
 				{
-					if ( bInDuck && !bDuckJump )
+
+					if ( (bInDuck || bInProne) && !bDuckJump )
 					{
 						player->m_Local.m_flDucktime = GAMEMOVEMENT_DUCK_TIME;
 					}
-					else if ( player->m_Local.m_bDucking && !player->m_Local.m_bDucked )
+					else if ((player->m_Local.m_bDucking && !player->m_Local.m_bDucked) || (player->m_Local.m_bProning && !player->m_Local.m_bProned))
 					{
 						// Invert time if release before fully ducked!!!
 						float unduckMilliseconds = 1000.0f * TIME_TO_UNDUCK;
@@ -4535,7 +4682,7 @@ void CGameMovement::Duck( void )
 				if ( CanUnduck() )
 				{
 					// or unducking
-					if ( ( player->m_Local.m_bDucking || player->m_Local.m_bDucked ) )
+					if ((player->m_Local.m_bDucking || player->m_Local.m_bDucked || player->m_Local.m_bProning || player->m_Local.m_bProned))
 					{
 						float flDuckMilliseconds = MAX( 0.0f, GAMEMOVEMENT_DUCK_TIME - (float)player->m_Local.m_flDucktime );
 						float flDuckSeconds = flDuckMilliseconds * 0.001f;
@@ -4543,14 +4690,23 @@ void CGameMovement::Duck( void )
 						// Finish ducking immediately if duck time is over or not on ground
 						if ( flDuckSeconds > TIME_TO_UNDUCK || ( bInAir && !bDuckJump ) )
 						{
+							Msg("\n FINISHUNDUCK \n");
 							FinishUnDuck();
 						}
 						else
 						{
 							// Calc parametric time
 							float flDuckFraction = SimpleSpline( 1.0f - ( flDuckSeconds / TIME_TO_UNDUCK ) );
-							SetDuckedEyeOffset( flDuckFraction );
-							player->m_Local.m_bDucking = true;
+							SetDuckedEyeOffset(flDuckFraction, player->m_Local.m_bProning || player->m_Local.m_bProned);
+							if (player->m_Local.m_bDucked || player->m_Local.m_bDucking)
+							{
+
+								player->m_Local.m_bDucking = true;
+							}
+							else
+							{
+								player->m_Local.m_bProning = true;
+							}
 						}
 					}
 				}
@@ -4560,11 +4716,22 @@ void CGameMovement::Duck( void )
 					//  that we'll unduck once we exit the tunnel, etc.
 					if ( player->m_Local.m_flDucktime != GAMEMOVEMENT_DUCK_TIME )
 					{
-						SetDuckedEyeOffset(1.0f);
+						
 						player->m_Local.m_flDucktime = GAMEMOVEMENT_DUCK_TIME;
-						player->m_Local.m_bDucked = true;
-						player->m_Local.m_bDucking = false;
-						player->AddFlag( FL_DUCKING );
+						if (player->m_Local.m_bProning || player->m_Local.m_bProned)
+						{
+							player->m_Local.m_bProned = true;
+							player->m_Local.m_bProning = false;
+							player->AddFlag(FL_PRONING);
+						}
+						else
+						{
+							player->m_Local.m_bDucked = true;
+							player->m_Local.m_bDucking = false;
+							player->AddFlag(FL_DUCKING);
+						}
+						SetDuckedEyeOffset(1.0f);
+						
 					}
 				}
 			}
@@ -4637,14 +4804,17 @@ void CGameMovement::Lean(void)
 				{
 					player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME;
 				}
-				player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME;
-				float unduckMilliseconds = 1000.0f * TIME_TO_LEAN;
-				float duckMilliseconds = 1000.0f * TIME_TO_LEAN;
-				float elapsedMilliseconds = GAMEMOVEMENT_LEAN_TIME - player->m_Local.m_flLeanLeftTime;
+				else
+				{
+					//player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME;
+					float unduckMilliseconds = 1000.0f * TIME_TO_LEAN;
+					float duckMilliseconds = 1000.0f * TIME_TO_LEAN;
+					float elapsedMilliseconds = GAMEMOVEMENT_LEAN_TIME - player->m_Local.m_flLeanLeftTime;
 
-				float fracDucked = elapsedMilliseconds / duckMilliseconds;
-				float remainingUnduckMilliseconds = fracDucked * unduckMilliseconds;
-				player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME - unduckMilliseconds + remainingUnduckMilliseconds;
+					float fracDucked = elapsedMilliseconds / duckMilliseconds;
+					float remainingUnduckMilliseconds = fracDucked * unduckMilliseconds;
+					player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME - unduckMilliseconds + remainingUnduckMilliseconds;
+				}
 			}
 			
 			float flDuckMilliseconds = MAX(0.0f, GAMEMOVEMENT_LEAN_TIME - (float)player->m_Local.m_flLeanLeftTime);
@@ -4652,6 +4822,7 @@ void CGameMovement::Lean(void)
 			// Finish ducking immediately if duck time is over or not on ground
 			if (flDuckSeconds > TIME_TO_LEAN)
 			{
+				player->m_Local.m_bLeanedLeft = false;
 				player->m_Local.m_bLeaningLeft = false;
 				SetLeanEyeOffset(0);
 			}
@@ -4663,14 +4834,50 @@ void CGameMovement::Lean(void)
 			}
 			
 		}
+		else if (player->m_Local.m_bLeaningRight)
+		{
+			// Invert time if release before fully ducked!!!
+			if (buttonsPressed & IN_LEANLEFT || buttonsReleased & IN_LEANRIGHT)
+			{
+				if (player->m_Local.m_bLeanedRight)
+				{
+					player->m_Local.m_flLeanRightTime = GAMEMOVEMENT_LEAN_TIME;
+				}
+				else
+				{
+					//player->m_Local.m_flLeanLeftTime = GAMEMOVEMENT_LEAN_TIME;
+					float unduckMilliseconds = 1000.0f * TIME_TO_LEAN;
+					float duckMilliseconds = 1000.0f * TIME_TO_LEAN;
+					float elapsedMilliseconds = GAMEMOVEMENT_LEAN_TIME - player->m_Local.m_flLeanRightTime;
+
+					float fracDucked = elapsedMilliseconds / duckMilliseconds;
+					float remainingUnduckMilliseconds = fracDucked * unduckMilliseconds;
+					player->m_Local.m_flLeanRightTime = GAMEMOVEMENT_LEAN_TIME - unduckMilliseconds + remainingUnduckMilliseconds;
+				}
+			}
+
+			float flDuckMilliseconds = MAX(0.0f, GAMEMOVEMENT_LEAN_TIME - (float)player->m_Local.m_flLeanRightTime);
+			float flDuckSeconds = flDuckMilliseconds * 0.001f;
+			// Finish ducking immediately if duck time is over or not on ground
+			if (flDuckSeconds > TIME_TO_LEAN)
+			{
+				player->m_Local.m_bLeanedRight = false;
+				player->m_Local.m_bLeaningRight = false;
+				SetLeanEyeOffset(0);
+			}
+			else
+			{
+				// Calc parametric time
+				float flDuckFraction = SimpleSpline(1.0f - (flDuckSeconds / TIME_TO_LEAN));
+				SetLeanEyeOffset(flDuckFraction);
+			}
+
+		}
 		if (player->m_Local.m_bLeanedLeft)
 		{
 			player->m_Local.m_bLeanedLeft = false;
 		}
-		if (player->m_Local.m_bLeaningRight)
-		{
-			player->m_Local.m_bLeaningRight = false;
-		}
+
 		if (player->m_Local.m_bLeanedRight)
 		{
 			player->m_Local.m_bLeanedRight = false;

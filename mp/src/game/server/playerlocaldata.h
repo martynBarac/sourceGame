@@ -61,7 +61,8 @@ public:
 	CNetworkVar(bool, m_bLeanedRight);
 	CNetworkVar(bool, m_bLeaningRight);
 	CNetworkVar(float, m_flLeanRightTime);
-
+	CNetworkVar(bool, m_bProned);
+	CNetworkVar(bool, m_bProning);
 	// Step sound side flip/flip
 	int m_nStepside;;
 	// Velocity at time when we hit ground

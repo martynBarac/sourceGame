@@ -4536,7 +4536,11 @@ void CBasePlayer::PostThink()
 		{
 			// set correct collision bounds (may have changed in player movement code)
 			VPROF_SCOPE_BEGIN( "CBasePlayer::PostThink-Bounds" );
-			if ( GetFlags() & FL_DUCKING )
+			if (GetFlags() & FL_PRONING)
+			{
+				SetCollisionBounds(VEC_PRONE_HULL_MIN, VEC_PRONE_HULL_MAX);
+			}
+			else if ( GetFlags() & FL_DUCKING )
 			{
 				SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
 			}
@@ -4684,6 +4688,10 @@ void CBasePlayer::PostThinkVPhysics( void )
 	if ( GetMoveType() == MOVETYPE_NOCLIP || GetMoveType() == MOVETYPE_OBSERVER )
 	{
 		collisionState = VPHYS_NOCLIP;
+	}
+	else if (GetFlags() & FL_PRONING)
+	{
+		collisionState = VPHYS_PRONE;
 	}
 	else if ( GetFlags() & FL_DUCKING )
 	{
@@ -5220,8 +5228,14 @@ int CBasePlayer::Restore( IRestore &restore )
 	
 	// clear this - it will get reset by touching the trigger again
 	m_afPhysicsFlags &= ~PFLAG_VPHYSICS_MOTIONCONTROLLER;
-
-	if ( GetFlags() & FL_DUCKING ) 
+	if (GetFlags() & FL_PRONING)
+	{
+		// Use the crouch HACK
+		FixPlayerCrouchStuck(this);
+		UTIL_SetSize(this, VEC_PRONE_HULL_MIN, VEC_PRONE_HULL_MAX);
+		m_Local.m_bDucked = true;
+	}
+	else if ( GetFlags() & FL_DUCKING ) 
 	{
 		// Use the crouch HACK
 		FixPlayerCrouchStuck( this );
@@ -8039,7 +8053,7 @@ void SendProxy_CropFlagsToPlayerFlagBitsLength( const SendProp *pProp, const voi
 // Player Physics Shadow Code
 //
 
-void CBasePlayer::SetupVPhysicsShadow( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, CPhysCollide *pStandModel, const char *pStandHullName, CPhysCollide *pCrouchModel, const char *pCrouchHullName )
+void CBasePlayer::SetupVPhysicsShadow(const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, CPhysCollide *pStandModel, const char *pStandHullName, CPhysCollide *pCrouchModel, const char *pCrouchHullName, CPhysCollide *pProneModel, const char *pProneHullName)
 {
 	solid_t solid;
 	Q_strncpy( solid.surfaceprop, "player", sizeof(solid.surfaceprop) );
@@ -8057,6 +8071,10 @@ void CBasePlayer::SetupVPhysicsShadow( const Vector &vecAbsOrigin, const Vector 
 	m_pShadowCrouch = PhysModelCreateCustom( this, pCrouchModel, GetLocalOrigin(), GetLocalAngles(), pCrouchHullName, false, &solid );
 	m_pShadowCrouch->SetCallbackFlags( CALLBACK_GLOBAL_COLLISION | CALLBACK_SHADOW_COLLISION );
 
+	// create proning hull
+	m_pShadowProne = PhysModelCreateCustom(this, pProneModel, GetLocalOrigin(), GetLocalAngles(), pCrouchHullName, false, &solid);
+	m_pShadowProne->SetCallbackFlags(CALLBACK_GLOBAL_COLLISION | CALLBACK_SHADOW_COLLISION);
+
 	// default to stand
 	VPhysicsSetObject( m_pShadowStand );
 
@@ -8070,7 +8088,11 @@ void CBasePlayer::SetupVPhysicsShadow( const Vector &vecAbsOrigin, const Vector 
 	UpdatePhysicsShadowToPosition( vecAbsOrigin );
 
 	// init state
-	if ( GetFlags() & FL_DUCKING )
+	if (GetFlags() & FL_PRONING)
+	{
+		SetVCollisionState(vecAbsOrigin, vecAbsVelocity, VPHYS_PRONE);
+	}
+	else if ( GetFlags() & FL_DUCKING )
 	{
 		SetVCollisionState( vecAbsOrigin, vecAbsVelocity, VPHYS_CROUCH );
 	}
@@ -8350,8 +8372,9 @@ void CBasePlayer::InitVCollision( const Vector &vecAbsOrigin, const Vector &vecA
 	
 	CPhysCollide *pModel = PhysCreateBbox( VEC_HULL_MIN_SCALED( this ), VEC_HULL_MAX_SCALED( this ) );
 	CPhysCollide *pCrouchModel = PhysCreateBbox( VEC_DUCK_HULL_MIN_SCALED( this ), VEC_DUCK_HULL_MAX_SCALED( this ) );
+	CPhysCollide *pProneModel = PhysCreateBbox(VEC_PRONE_HULL_MIN_SCALED(this), VEC_PRONE_HULL_MAX_SCALED(this));
 
-	SetupVPhysicsShadow( vecAbsOrigin, vecAbsVelocity, pModel, "player_stand", pCrouchModel, "player_crouch" );
+	SetupVPhysicsShadow( vecAbsOrigin, vecAbsVelocity, pModel, "player_stand", pCrouchModel, "player_crouch", pProneModel, "player_prone");
 }
 
 
@@ -8412,7 +8435,14 @@ void CBasePlayer::SetVCollisionState( const Vector &vecAbsOrigin, const Vector &
 		VPhysicsSwapObject( m_pShadowCrouch );
 		m_pShadowCrouch->EnableCollisions( true );
 		break;
-	
+	case VPHYS_PRONE:
+		m_pShadowCrouch->SetPosition(vecAbsOrigin, vec3_angle, true);
+		m_pShadowCrouch->SetVelocity(&vecAbsVelocity, NULL);
+		m_pShadowStand->EnableCollisions(false);
+		m_pPhysicsController->SetObject(m_pShadowProne);
+		VPhysicsSwapObject(m_pShadowCrouch);
+		m_pShadowCrouch->EnableCollisions(true);
+		break;
 	case VPHYS_NOCLIP:
 		m_pShadowCrouch->EnableCollisions( false );
 		m_pShadowStand->EnableCollisions( false );

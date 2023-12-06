@@ -25,7 +25,7 @@
 #define GAMEMOVEMENT_JUMP_HEIGHT			21.0f		// units
 #define GAMEMOVEMENT_TIME_TO_UNDUCK			( TIME_TO_UNDUCK * 1000.0f )		// ms
 #define GAMEMOVEMENT_TIME_TO_UNDUCK_INV		( GAMEMOVEMENT_DUCK_TIME - GAMEMOVEMENT_TIME_TO_UNDUCK )
-
+#define GAMEMOVEMENT_DUCK_TO_PRONE_TIME (GAMEMOVEMENT_DUCK_TIME - 1000.0f*TIME_TO_DUCK*(VEC_VIEW_SCALED(player).z-VEC_DUCK_VIEW_SCALED(player).z)/(VEC_VIEW_SCALED(player).z-VEC_PRONE_VIEW_SCALED(player).z))
 enum
 {
 	SPEED_CROPPED_RESET = 0,
@@ -52,7 +52,9 @@ public:
 	virtual void	DiffPrint( PRINTF_FORMAT_STRING char const *fmt, ... );
 	virtual Vector	GetPlayerMins( bool ducked ) const;
 	virtual Vector	GetPlayerMaxs( bool ducked ) const;
+	virtual Vector	GetPlayerMins(bool ducked, bool proned) const;
 	virtual Vector	GetPlayerViewOffset( bool ducked ) const;
+	virtual Vector	GetPlayerViewOffset(bool ducked, bool proned) const;
 	virtual void	setViewOffsetZ(Vector& offset);
 // For sanity checking getting stuck on CMoveData::SetAbsOrigin
 	virtual void	TracePlayerBBox( const Vector& start, const Vector& end, unsigned int fMask, int collisionGroup, trace_t& pm );
@@ -218,12 +220,13 @@ protected:
 	virtual void	FinishUnDuck( void );
 	virtual void	FinishDuck( void );
 	virtual bool	CanUnduck();
+	virtual bool	CanUnprone();
 	void			UpdateDuckJumpEyeOffset( void );
 	bool			CanUnDuckJump( trace_t &trace );
 	void			StartUnDuckJump( void );
 	void			FinishUnDuckJump( trace_t &trace );
 	void			SetLeanEyeOffset(float leanFraction);
-	void			SetDuckedEyeOffset( float duckFraction );
+	void			SetDuckedEyeOffset( float duckFraction, bool prone = false );
 	void			FixPlayerCrouchStuck( bool moveup );
 
 	float			SplineFraction( float value, float scale );

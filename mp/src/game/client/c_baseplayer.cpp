@@ -163,6 +163,8 @@ BEGIN_RECV_TABLE_NOBASE( CPlayerLocalData, DT_Local )
 	RecvPropInt		(RECVINFO(m_bLeaningRight)),
 	RecvPropInt		(RECVINFO(m_bLeanedRight)),
 	RecvPropFloat	(RECVINFO(m_flLeanRightTime)),
+	RecvPropInt		(RECVINFO(m_bProning)),
+	RecvPropInt		(RECVINFO(m_bProned)),
 #if PREDICTION_ERROR_CHECK_LEVEL > 1 
 	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[0], m_vecPunchAngle[0])),
 	RecvPropFloat	(RECVINFO_NAME( m_vecPunchAngle.m_Value[1], m_vecPunchAngle[1])),
@@ -339,6 +341,8 @@ BEGIN_PREDICTION_DATA_NO_BASE( CPlayerLocalData )
 
 	DEFINE_PRED_FIELD( m_bDucked, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bDucking, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD(m_bProned, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
+	DEFINE_PRED_FIELD(m_bProning, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE),
 	DEFINE_PRED_FIELD( m_bInDuckJump, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flDucktime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flDuckJumpTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
@@ -2044,7 +2048,11 @@ void C_BasePlayer::PostThink( void )
 	if ( IsAlive())
 	{
 		// Need to do this on the client to avoid prediction errors
-		if ( GetFlags() & FL_DUCKING )
+		if (GetFlags() & FL_PRONING)
+		{
+			SetCollisionBounds(VEC_PRONE_HULL_MIN, VEC_PRONE_HULL_MAX);
+		}
+		else if ( GetFlags() & FL_DUCKING )
 		{
 			SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
 		}

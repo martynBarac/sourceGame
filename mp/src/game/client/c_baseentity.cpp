@@ -2149,10 +2149,10 @@ void C_BaseEntity::PreDataUpdate( DataUpdateType_t updateType )
 #if 0 // Yahn suggesting commenting this out as a fix to demo recording not working
 	// If the entity moves itself every FRAME on the server but doesn't update animtime,
 	// then use the current server time as the time for interpolation.
-	if ( IsSelfAnimating() )
-	{
-		m_flAnimTime = engine->GetLastTimeStamp();
-	}
+	//if ( IsSelfAnimating() )
+	//{
+	//	m_flAnimTime = engine->GetLastTimeStamp();
+	//}
 #endif
 
 	m_vecOldOrigin = GetNetworkOrigin();

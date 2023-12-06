@@ -369,7 +369,11 @@ const Vector CBasePlayer::GetPlayerMins( void ) const
 	}
 	else
 	{
-		if ( GetFlags() & FL_DUCKING )
+		if (GetFlags() & FL_PRONING)
+		{
+			return VEC_PRONE_HULL_MIN_SCALED(this);
+		}
+		else if ( GetFlags() & FL_DUCKING )
 		{
 			return VEC_DUCK_HULL_MIN_SCALED( this );
 		}
@@ -393,7 +397,11 @@ const Vector CBasePlayer::GetPlayerMaxs( void ) const
 	}
 	else
 	{
-		if ( GetFlags() & FL_DUCKING )
+		if (GetFlags() & FL_PRONING)
+		{
+			return VEC_PRONE_HULL_MAX_SCALED(this);
+		}
+		else if ( GetFlags() & FL_DUCKING )
 		{
 			return VEC_DUCK_HULL_MAX_SCALED( this );
 		}
@@ -1843,7 +1851,9 @@ void CBasePlayer::SharedSpawn()
 	MDLCACHE_CRITICAL_SECTION();
 	SetSequence( SelectWeightedSequence( ACT_IDLE ) );
 
-	if ( GetFlags() & FL_DUCKING ) 
+	if (GetFlags() & FL_PRONING)
+		SetCollisionBounds(VEC_PRONE_HULL_MIN, VEC_PRONE_HULL_MAX);
+	else if ( GetFlags() & FL_DUCKING ) 
 		SetCollisionBounds( VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
 	else
 		SetCollisionBounds( VEC_HULL_MIN, VEC_HULL_MAX );

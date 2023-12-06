@@ -39,6 +39,9 @@ public:
 		Vector vDuckHullMin,
 		Vector vDuckHullMax,
 		Vector vDuckView,
+		Vector vProneHullMin,
+		Vector vProneHullMax,
+		Vector vProneView,
 		Vector vObsHullMin,
 		Vector vObsHullMax,
 		Vector vDeadViewHeight )
@@ -49,6 +52,9 @@ public:
 		m_vDuckHullMin = vDuckHullMin;
 		m_vDuckHullMax = vDuckHullMax;
 		m_vDuckView = vDuckView;
+		m_vProneHullMin = vProneHullMin;
+		m_vProneHullMax = vProneHullMax;
+		m_vProneView = vProneView;
 		m_vObsHullMin = vObsHullMin;
 		m_vObsHullMax = vObsHullMax;
 		m_vDeadViewHeight = vDeadViewHeight;
@@ -64,6 +70,10 @@ public:
 	Vector m_vDuckHullMax;
 	Vector m_vDuckView;
 	
+	Vector m_vProneHullMin;
+	Vector m_vProneHullMax;
+	Vector m_vProneView;
+
 	Vector m_vObsHullMin;
 	Vector m_vObsHullMax;
 	
@@ -79,6 +89,10 @@ public:
 #define VEC_DUCK_HULL_MAX	g_pGameRules->GetViewVectors()->m_vDuckHullMax
 #define VEC_DUCK_VIEW		g_pGameRules->GetViewVectors()->m_vDuckView
 
+#define VEC_PRONE_HULL_MIN	g_pGameRules->GetViewVectors()->m_vProneHullMin
+#define VEC_PRONE_HULL_MAX	g_pGameRules->GetViewVectors()->m_vProneHullMax
+#define VEC_PRONE_VIEW		g_pGameRules->GetViewVectors()->m_vProneView
+
 #define VEC_OBS_HULL_MIN	g_pGameRules->GetViewVectors()->m_vObsHullMin
 #define VEC_OBS_HULL_MAX	g_pGameRules->GetViewVectors()->m_vObsHullMax
 
@@ -92,6 +106,10 @@ public:
 #define VEC_DUCK_HULL_MIN_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vDuckHullMin * player->GetModelScale() )
 #define VEC_DUCK_HULL_MAX_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vDuckHullMax * player->GetModelScale() )
 #define VEC_DUCK_VIEW_SCALED( player )			( g_pGameRules->GetViewVectors()->m_vDuckView * player->GetModelScale() )
+
+#define VEC_PRONE_HULL_MIN_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vProneHullMin * player->GetModelScale() )
+#define VEC_PRONE_HULL_MAX_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vProneHullMax * player->GetModelScale() )
+#define VEC_PRONE_VIEW_SCALED( player )			( g_pGameRules->GetViewVectors()->m_vProneView * player->GetModelScale() )
 
 #define VEC_OBS_HULL_MIN_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vObsHullMin * player->GetModelScale() )
 #define VEC_OBS_HULL_MAX_SCALED( player )		( g_pGameRules->GetViewVectors()->m_vObsHullMax * player->GetModelScale() )

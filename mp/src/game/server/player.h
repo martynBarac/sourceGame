@@ -164,6 +164,7 @@ enum
 {
 	VPHYS_WALK = 0,
 	VPHYS_CROUCH,
+	VPHYS_PRONE,
 	VPHYS_NOCLIP,
 };
 
@@ -624,7 +625,7 @@ public:
 
 public:
 	// Player Physics Shadow
-	void					SetupVPhysicsShadow( const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, CPhysCollide *pStandModel, const char *pStandHullName, CPhysCollide *pCrouchModel, const char *pCrouchHullName );
+	void					SetupVPhysicsShadow(const Vector &vecAbsOrigin, const Vector &vecAbsVelocity, CPhysCollide *pStandModel, const char *pStandHullName, CPhysCollide *pCrouchModel, const char *pCrouchHullName, CPhysCollide *pProneModel, const char *pProneHullName);
 	IPhysicsPlayerController* GetPhysicsController() { return m_pPhysicsController; }
 	virtual void			VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
 	void					VPhysicsUpdate( IPhysicsObject *pPhysics );
@@ -996,6 +997,7 @@ protected: //used to be private, but need access for portal mod (Dave Kircher)
 	IPhysicsPlayerController	*m_pPhysicsController;
 	IPhysicsObject				*m_pShadowStand;
 	IPhysicsObject				*m_pShadowCrouch;
+	IPhysicsObject				*m_pShadowProne;
 	Vector						m_oldOrigin;
 	Vector						m_vecSmoothedVelocity;
 	bool						m_touchedPhysObject;
