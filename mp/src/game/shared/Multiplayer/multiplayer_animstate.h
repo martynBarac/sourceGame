@@ -113,9 +113,12 @@ struct MultiPlayerPoseData_t
 	int			m_iBodyHeight;
 	int			m_iMoveYaw;
 	int			m_iMoveScale;
+	int			m_iLeanAmount;
 
 	float		m_flEstimateYaw;
 	float		m_flLastAimTurnTime;
+	float		m_flLeanStartTime;
+	float		m_flLeanEndTime;
 
 	void Init()
 	{
@@ -126,8 +129,12 @@ struct MultiPlayerPoseData_t
 		m_iBodyHeight = 0;
 		m_iMoveYaw = 0;
 		m_iMoveScale = 0;
+		m_iLeanAmount = 0;
+
 		m_flEstimateYaw = 0.0f;
 		m_flLastAimTurnTime = 0.0f;
+		m_flLeanStartTime = 0.0f;
+		m_flLeanEndTime = 0.0f;
 	}
 };
 
@@ -227,6 +234,7 @@ protected:
 
 	virtual bool HandleJumping( Activity &idealActivity );
 	virtual bool HandleDucking( Activity &idealActivity );
+	virtual bool HandleProning(Activity &idealActivity);
 	virtual bool HandleMoving( Activity &idealActivity );
 	virtual bool HandleSwimming( Activity &idealActivity );
 	virtual bool HandleDying( Activity &idealActivity );

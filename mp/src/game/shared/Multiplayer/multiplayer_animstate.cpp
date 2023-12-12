@@ -829,6 +829,24 @@ bool CMultiPlayerAnimState::HandleDucking( Activity &idealActivity )
 	return false;
 }
 
+bool CMultiPlayerAnimState::HandleProning(Activity &idealActivity)
+{
+	if (GetBasePlayer()->GetFlags() & FL_PRONING)
+	{
+		if (GetOuterXYSpeed() > MOVING_MINIMUM_SPEED)
+		{
+			idealActivity = ACT_HL2MP_IDLE_PRONE;
+		}
+		else
+		{
+			idealActivity = ACT_HL2MP_IDLE_PRONE;
+		}
+
+		return true;
+	}
+
+	return false;
+}
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : &idealActivity - 
@@ -921,6 +939,7 @@ Activity CMultiPlayerAnimState::CalcMainActivity()
 	Activity idealActivity = ACT_MP_STAND_IDLE;
 
 	if ( HandleJumping( idealActivity ) || 
+		HandleProning(idealActivity) ||
 		HandleDucking( idealActivity ) || 
 		HandleSwimming( idealActivity ) || 
 		HandleDying( idealActivity ) )
@@ -943,7 +962,7 @@ Activity CMultiPlayerAnimState::CalcMainActivity()
 	}
 
 #endif
-
+	
 	return idealActivity;
 }
 
@@ -1077,8 +1096,8 @@ void CMultiPlayerAnimState::ComputeSequences( CStudioHdr *pStudioHdr )
 	VPROF( "CBasePlayerAnimState::ComputeSequences" );
 
 	// Lower body (walk/run/idle).
+	
 	ComputeMainSequence();
-
 	// The groundspeed interpolator uses the main sequence info.
 	UpdateInterpolators();		
 	ComputeGestureSequence( pStudioHdr );
@@ -1122,6 +1141,9 @@ void CMultiPlayerAnimState::ComputeMainSequence()
 		ResetGroundSpeed();
 	}
 
+
+
+
 	// Export to our outer class..
 	int animDesired = SelectWeightedSequence( TranslateActivity( idealActivity ) );
 	if ( pPlayer->GetSequenceActivity( pPlayer->GetSequence() ) == pPlayer->GetSequenceActivity( animDesired ) )
@@ -1131,9 +1153,9 @@ void CMultiPlayerAnimState::ComputeMainSequence()
 	{
 		 animDesired = 0;
 	}
-
+	//pPlayer->ResetSequence(ACT_HL2MP_IDLE_PRONE);
 	pPlayer->ResetSequence( animDesired );
-
+	
 #ifdef CLIENT_DLL
 	// If we went from idle to walk, reset the interpolation history.
 	// Kind of hacky putting this here.. it might belong outside the base class.
@@ -1376,6 +1398,8 @@ bool CMultiPlayerAnimState::SetupPoseParameters( CStudioHdr *pStudioHdr )
 
 	m_PoseParameterData.m_iMoveYaw = GetBasePlayer()->LookupPoseParameter( pStudioHdr, "move_yaw" );
 	m_PoseParameterData.m_iMoveScale = GetBasePlayer()->LookupPoseParameter( pStudioHdr, "move_scale" );
+
+	m_PoseParameterData.m_iLeanAmount = GetBasePlayer()->LookupPoseParameter(pStudioHdr, "lean_amount");
 	/*
 	if ( ( m_PoseParameterData.m_iMoveYaw < 0 ) || ( m_PoseParameterData.m_iMoveScale < 0 ) )
 		return false;
