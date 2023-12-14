@@ -1315,3 +1315,43 @@ void CPushable::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 	BaseClass::VPhysicsCollision( index, pEvent );
 }
 
+
+
+class CBreakableHoles : public CBreakable
+{
+	DECLARE_CLASS(CBreakableHoles, CBreakable);
+	DECLARE_DATADESC();
+	DECLARE_SERVERCLASS();
+public:
+	void TraceAttack(const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator);
+};
+
+LINK_ENTITY_TO_CLASS(func_breakableholes, CBreakableHoles);
+IMPLEMENT_SERVERCLASS_ST(CBreakableHoles, DT_BreakableHoles)
+END_SEND_TABLE()
+void CBreakableHoles::TraceAttack(const CTakeDamageInfo &info, const Vector &vecDir, trace_t *ptr, CDmgAccumulator *pAccumulator)
+{
+	// random spark if this is a 'computer' object
+	if (random->RandomInt(0, 1))
+	{
+		switch (m_Material)
+		{
+		case matComputer:
+		{
+			g_pEffects->Sparks(ptr->endpos);
+
+			EmitSound("Breakable.Computer");
+		}
+		break;
+
+		case matUnbreakableGlass:
+			g_pEffects->Ricochet(ptr->endpos, (vecDir*-1.0f));
+			break;
+		}
+	}
+	/*CBaseEntity *pEnt = CreateEntityByName("prop_dynamic");
+	pEnt->SetAbsOrigin(ptr->endpos);
+	pEnt->SetModel("models/bullethole.mdl");
+	pEnt->Spawn();*/
+	BaseClass::TraceAttack(info, vecDir, ptr, pAccumulator);
+}

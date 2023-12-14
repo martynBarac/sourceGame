@@ -13,5 +13,7 @@ $Project "Shaders (HL2MP)"
 $Folder	"Source Files"
 	{
 		$File	"MyShader.cpp"
+		$File	"MyHoleShader.cpp"
+		$File	"textureshader.cpp"
 	}
 }

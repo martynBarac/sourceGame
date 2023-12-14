@@ -6,7 +6,7 @@
 
 #ifndef GLOW_OUTLINE_EFFECT_H
 #define GLOW_OUTLINE_EFFECT_H
-
+#define GLOWS_ENABLE
 #if defined( COMPILER_MSVC )
 #pragma once
 #endif
