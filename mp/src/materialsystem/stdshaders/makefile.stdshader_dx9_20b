@@ -1,0 +1,42 @@
+default:  fxctmp9_tmp\my_pixelshader_ps20.inc shaders\fxc\my_pixelshader_ps20.vcs fxctmp9_tmp\my_pixelshader_ps20b.inc shaders\fxc\my_pixelshader_ps20b.vcs fxctmp9_tmp\my_pixelshader_vs20.inc shaders\fxc\my_pixelshader_vs20.vcs fxctmp9_tmp\textureshader_vs20.inc shaders\fxc\textureshader_vs20.vcs fxctmp9_tmp\textureshader_ps20.inc shaders\fxc\textureshader_ps20.vcs
+
+fxctmp9_tmp\my_pixelshader_ps20.inc shaders\fxc\my_pixelshader_ps20.vcs: my_pixelshader_ps2x.fxc common_hlsl_cpp_consts.h common_ps_fxc.h common_fxc.h common_pragmas.h
+	perl ..\..\devtools\bin\fxc_prep.pl   -source "..\.." my_pixelshader_ps2x.fxc-----my_pixelshader_ps20
+	echo my_pixelshader_ps2x.fxc>> filestocopy.txt
+	echo common_hlsl_cpp_consts.h>> filestocopy.txt
+	echo common_ps_fxc.h>> filestocopy.txt
+	echo common_fxc.h>> filestocopy.txt
+	echo common_pragmas.h>> filestocopy.txt
+
+fxctmp9_tmp\my_pixelshader_ps20b.inc shaders\fxc\my_pixelshader_ps20b.vcs: my_pixelshader_ps2x.fxc common_hlsl_cpp_consts.h common_ps_fxc.h common_fxc.h common_pragmas.h
+	perl ..\..\devtools\bin\fxc_prep.pl   -source "..\.." my_pixelshader_ps2x.fxc-----my_pixelshader_ps20b
+	echo my_pixelshader_ps2x.fxc>> filestocopy.txt
+	echo common_hlsl_cpp_consts.h>> filestocopy.txt
+	echo common_ps_fxc.h>> filestocopy.txt
+	echo common_fxc.h>> filestocopy.txt
+	echo common_pragmas.h>> filestocopy.txt
+
+fxctmp9_tmp\my_pixelshader_vs20.inc shaders\fxc\my_pixelshader_vs20.vcs: my_pixelshader_vs20.fxc common_fxc.h common_hlsl_cpp_consts.h common_vs_fxc.h common_pragmas.h
+	perl ..\..\devtools\bin\fxc_prep.pl   -source "..\.." my_pixelshader_vs20.fxc-----my_pixelshader_vs20
+	echo my_pixelshader_vs20.fxc>> filestocopy.txt
+	echo common_fxc.h>> filestocopy.txt
+	echo common_hlsl_cpp_consts.h>> filestocopy.txt
+	echo common_vs_fxc.h>> filestocopy.txt
+	echo common_pragmas.h>> filestocopy.txt
+
+fxctmp9_tmp\textureshader_vs20.inc shaders\fxc\textureshader_vs20.vcs: textureshader_vs20.fxc common_pragmas.h common_fxc.h common_vs_fxc.h common_hlsl_cpp_consts.h
+	perl ..\..\devtools\bin\fxc_prep.pl   -source "..\.." textureshader_vs20.fxc-----textureshader_vs20
+	echo textureshader_vs20.fxc>> filestocopy.txt
+	echo common_pragmas.h>> filestocopy.txt
+	echo common_fxc.h>> filestocopy.txt
+	echo common_vs_fxc.h>> filestocopy.txt
+	echo common_hlsl_cpp_consts.h>> filestocopy.txt
+
+fxctmp9_tmp\textureshader_ps20.inc shaders\fxc\textureshader_ps20.vcs: textureshader_ps20.fxc common_pragmas.h common_ps_fxc.h common_fxc.h common_hlsl_cpp_consts.h
+	perl ..\..\devtools\bin\fxc_prep.pl   -source "..\.." textureshader_ps20.fxc-----textureshader_ps20
+	echo textureshader_ps20.fxc>> filestocopy.txt
+	echo common_pragmas.h>> filestocopy.txt
+	echo common_ps_fxc.h>> filestocopy.txt
+	echo common_fxc.h>> filestocopy.txt
+	echo common_hlsl_cpp_consts.h>> filestocopy.txt
+

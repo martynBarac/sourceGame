@@ -1,0 +1,36 @@
+/* Always include this file*/
+#include "common_vs_fxc.h"
+
+/* Extern variable */
+float fSinTime : register (SHADER_SPECIFIC_CONST_0); //read a variable from register location
+
+/* The input of this vertex shader */
+struct VS_INPUT
+{
+	float3 vPos	: POSITION;
+	float2 vTexCoord : TEXCOORD0; //read a pair of texture coordinates from the vertex
+};
+
+/* The output of this vertex shader */
+struct VS_OUTPUT
+{
+    	float4 vProjPos : POSITION;
+	float2 vTexCoord : TEXCOORD0;	 //pass texture coordinates to pixel shader
+};
+
+/* main function */
+VS_OUTPUT main( const VS_INPUT input )
+{
+	/* initialize output structure */
+	VS_OUTPUT output = ( VS_OUTPUT )0;
+
+	/* Project the point. (multiply with model-view-projection matrix) */
+	output.vProjPos = mul( float4( input.vPos, 1 ), cModelViewProj );
+
+	/* Pass texture coordinates to pixel shader */
+	output.vTexCoord.x = input.vTexCoord.x + fSinTime; 
+	output.vTexCoord.y = input.vTexCoord.y + fSinTime; //offset the texture coordinates using the variable
+
+	/* Return output */
+	return output;
+}

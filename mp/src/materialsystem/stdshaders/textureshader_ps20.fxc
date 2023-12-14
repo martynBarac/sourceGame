@@ -1,0 +1,11 @@
+/* Always include this file*/
+#include "common_ps_fxc.h"
+
+/* Get texture */
+sampler BaseTexture : register ( s0 ); //read texture from register location
+
+HALF4 main(float2 TexCoord : TEXCOORD0) : COLOR //takes texture coordinates as input
+{	
+	/* Output texture color */
+	return tex2D(BaseTexture, TexCoord); //return texel at tex coordinates location
+}
